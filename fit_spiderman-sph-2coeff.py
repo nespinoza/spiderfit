@@ -81,24 +81,24 @@ def prior(cube, ndim, nparams):
     # Log10 of spherical harmonic coefficient:
     cube[2] = utils.transform_uniform(cube[2],-6, -2.)
     cube[3] = utils.transform_uniform(cube[3],-6, -2.)
-    cube[4] = utils.transform_uniform(cube[4],-6, -2.)
-    cube[5] = utils.transform_uniform(cube[5],-6, -2.)
+    #cube[4] = utils.transform_uniform(cube[4],-6, -2.)
+    #cube[5] = utils.transform_uniform(cube[5],-6, -2.)
 
 # Define the likelihood:
 spider_params.l1 = wlows[ifit]*1e-6
 spider_params.l2 = whighs[ifit]*1e-6
 def loglike(cube, ndim, nparams):
     # Extract parameters:
-    #laO, loO, l_c1, l_c4 = cube[0], cube[1], cube[2], cube[3]
-    laO, loO, l_c1, l_c2, l_c3, l_c4 = cube[0], cube[1], cube[2], cube[3], cube[4], cube[5]
+    laO, loO, l_c1, l_c4 = cube[0], cube[1], cube[2], cube[3]
+    #laO, loO, l_c1, l_c2, l_c3, l_c4 = cube[0], cube[1], cube[2], cube[3], cube[4], cube[5]
     #laO, loO, l_c1 = cube[0], cube[1], cube[2]
     #txi,night_T,deltaT = cube[0], cube[1], cube[2]
     #xi = np.abs(txi)
     # Generate model:
     spider_params.la0= laO
     spider_params.lo0 = loO
-    spider_params.sph = [10**(l_c1), 10**(l_c2), 10**(l_c3), 10**(l_c4)]
-    #spider_params.sph = [10**(l_c1), 0., 0., 10**(l_c4)]
+    #spider_params.sph = [10**(l_c1), 10**(l_c2), 10**(l_c3), 10**(l_c4)]
+    spider_params.sph = [10**(l_c1), 0., 0., 10**(l_c4)]
 
     # Iterate through the lightcurves, add up the log-likelihood:
     t, f = all_t[ifit], all_f[ifit]
@@ -111,11 +111,11 @@ def loglike(cube, ndim, nparams):
         # Evaluate and add-up the log-likelihood:
         return -0.5*ndata*np.log(2.*np.pi*all_ferr[ifit]**2) + (-0.5 * ((model - f) / all_ferr[ifit])**2).sum()
 
-n_params = 6
+n_params = 4
 out_file = 'out_multinest'
 
 
-if not os.path.exists('fit-sph-'+str(ifit)+'-4c.pkl'):
+if not os.path.exists('fit-sph-'+str(ifit)+'.pkl'):
     # Run MultiNest:
     pymultinest.run(loglike, prior, n_params, n_live_points = 500,outputfiles_basename=out_file, resume = False, verbose = True)
     # Get output:
@@ -123,27 +123,27 @@ if not os.path.exists('fit-sph-'+str(ifit)+'-4c.pkl'):
     # Get out parameters: this matrix has (samples,n_params+1):
     posterior_samples = output.get_equal_weighted_posterior()[:,:-1]
     # Save matrix:
-    pickle.dump(posterior_samples,open('fit-sph-'+str(ifit)+'-4c.pkl','wb'))
+    pickle.dump(posterior_samples,open('fit-sph-'+str(ifit)+'.pkl','wb'))
     print('Done! Run again to plot')
     sys.exit()
 else:
-    posterior_samples = pickle.load(open('fit-sph-'+str(ifit)+'-4c.pkl','rb'))
+    posterior_samples = pickle.load(open('fit-sph-'+str(ifit)+'.pkl','rb'))
 
 t, f = all_t[ifit], all_f[ifit]
 plt.errorbar(t, f, yerr = np.ones(len(t))*all_ferr[ifit],fmt = '.', alpha = 0.2)
 
-for (laO, loO, l_c1, l_c2, l_c3, l_c4) in posterior_samples[-300:,:]:
-#for (laO, loO, l_c1, l_c4) in posterior_samples[-300:,:]:
+#for (laO, loO, l_c1, l_c2, l_c3, l_c4) in posterior_samples[-300:,:]:
+for (laO, loO, l_c1, l_c4) in posterior_samples[-300:,:]:
     spider_params.la0= laO #np.abs(txi)
     spider_params.lo0= loO #night_T
-    spider_params.sph = [10**(l_c1), 10**(l_c2), 10**(l_c3), 10**(l_c4)]#deltaT
-    #spider_params.sph = [10**(l_c1),0.,0., 10**(l_c4)]
+    #spider_params.sph = [10**(l_c1), 10**(l_c2), 10**(l_c3), 10**(l_c4)]#deltaT
+    spider_params.sph = [10**(l_c1),0.,0., 10**(l_c4)]
     # eval:
     model = spider_params.lightcurve(all_t[ifit],stellar_grid = stellar_grids[ifit])
     plt.plot(all_t[ifit], model, '-', color='blue', alpha=0.01)
 plt.show()
 
 import corner
-names = [r'$Latitude offset$', r'$Longitude offset$', r'$l=0, m=0$', r'$l=1, m=-1$', r'$l=1$, $m=0$', 'r$l=1$ $m=1$']
+names = [r'$Latitude offset$', r'$Longitude offset$', r'$l=0, m=0$', 'r$l=1$ $m=1$']
 figure = corner.corner(posterior_samples, labels = names, titles = names, bins=15,plot_datapoints='False',quantiles=[.16,0.5,.84],show_titles='True',plot_contours='True',levels=(1.-np.exp(-(1)**2/2.),1.-np.exp(-(2)**2/2.),1.-np.exp(-(3)**2/2.)),color=pal[0])
 plt.show()
