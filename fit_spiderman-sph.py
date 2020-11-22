@@ -15,7 +15,7 @@ import seaborn as sns
 sns.set_style('ticks')
 pal = sns.color_palette("magma", n_colors = 5)
 
-ifit = 0
+ifit = 1
 use_phoenix = False
 
 if use_phoenix:
@@ -33,11 +33,11 @@ whighs = np.array([3.27, 3.67, 4.23, 4.63, 5.03])
 stellar_grids = [[], [], [], [], []]
 
 # Load datasets: 
-t1, f1, f1err = np.loadtxt('atmosphere_basaltic_3.07um.dat',unpack=True, usecols = (0, 1, 2))
-t2, f2, f2err = np.loadtxt('atmosphere_basaltic_3.47um.dat',unpack=True, usecols = (0, 1, 2))
-t3, f3, f3err = np.loadtxt('atmosphere_basaltic_4.03um.dat',unpack=True, usecols = (0, 1, 2))
-t4, f4, f4err = np.loadtxt('atmosphere_basaltic_4.43um.dat',unpack=True, usecols = (0, 1, 2))
-t5, f5, f5err = np.loadtxt('atmosphere_basaltic_4.83um.dat',unpack=True, usecols = (0, 1, 2))
+t1, f1, f1err, m1 = np.loadtxt('atmosphere_basaltic_3.07um.dat',unpack=True, usecols = (0, 1, 2, 3)) 
+t2, f2, f2err, m2 = np.loadtxt('atmosphere_basaltic_3.47um.dat',unpack=True, usecols = (0, 1, 2, 3)) 
+t3, f3, f3err, m3 = np.loadtxt('atmosphere_basaltic_4.03um.dat',unpack=True, usecols = (0, 1, 2, 3)) 
+t4, f4, f4err, m4 = np.loadtxt('atmosphere_basaltic_4.43um.dat',unpack=True, usecols = (0, 1, 2, 3)) 
+t5, f5, f5err, m5 = np.loadtxt('atmosphere_basaltic_4.83um.dat',unpack=True, usecols = (0, 1, 2, 3)) 
 #for (laO, loO, l_c1) in posterior_samples[-300:,:]:
 all_t = [t1,t2,t3,t4,t5]
 all_f = [f1,f2,f3,f4,f5]
@@ -85,8 +85,8 @@ def prior(cube, ndim, nparams):
     cube[5] = utils.transform_uniform(cube[5],-6, -2.)
 
 # Define the likelihood:
-spider_params.l1 = wlows[ifit]*1e-6
-spider_params.l2 = whighs[ifit]*1e-6
+#spider_params.l1 = wlows[ifit]*1e-6
+#spider_params.l2 = whighs[ifit]*1e-6
 def loglike(cube, ndim, nparams):
     # Extract parameters:
     #laO, loO, l_c1, l_c4 = cube[0], cube[1], cube[2], cube[3]
@@ -104,7 +104,7 @@ def loglike(cube, ndim, nparams):
     t, f = all_t[ifit], all_f[ifit]
     # Evaluate lightcurve:
     model = spider_params.lightcurve(t, stellar_grid = stellar_grids[ifit])
-    idx = np.where(model<0)[0]
+    idx = np.where((model - 1.)< 0.)[0]
     if len(idx) != 0:
         return -np.inf
     else:
@@ -132,7 +132,7 @@ else:
 t, f = all_t[ifit], all_f[ifit]
 plt.errorbar(t, f, yerr = np.ones(len(t))*all_ferr[ifit],fmt = '.', alpha = 0.2)
 
-for (laO, loO, l_c1, l_c2, l_c3, l_c4) in posterior_samples[-300:,:]:
+for (laO, loO, l_c1, l_c2, l_c3, l_c4) in posterior_samples[:,:]:
 #for (laO, loO, l_c1, l_c4) in posterior_samples[-300:,:]:
     spider_params.la0= laO #np.abs(txi)
     spider_params.lo0= loO #night_T
@@ -141,6 +141,7 @@ for (laO, loO, l_c1, l_c2, l_c3, l_c4) in posterior_samples[-300:,:]:
     # eval:
     model = spider_params.lightcurve(all_t[ifit],stellar_grid = stellar_grids[ifit])
     plt.plot(all_t[ifit], model, '-', color='blue', alpha=0.01)
+exec("plt.plot(t"+str(ifit+1)+", m"+str(ifit+1)+"+1., '-', color = 'red', label = 'Real model')")
 plt.show()
 
 import corner
